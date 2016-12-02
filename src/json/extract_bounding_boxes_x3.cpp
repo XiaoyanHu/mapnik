@@ -41,29 +41,29 @@ struct calculate_bounding_box
         box_.init(pt.x, pt.y);
     }
 
-    void operator()(mapnik::json::ring const& ring) const
+    void operator()(mapnik::json::ring const& r) const
     {
-        for (auto const& pt : ring)
+        for (auto const& pt : r)
         {
             if (!box_.valid()) box_.init(pt.x, pt.y);
             else box_.expand_to_include(pt.x, pt.y);
         }
     }
 
-    void operator()(mapnik::json::rings const& rings) const
+    void operator()(mapnik::json::rings const& rs) const
     {
-        for (auto const& ring : rings)
+        for (auto const& r : rs)
         {
-            operator()(ring);
+            operator()(r);
             break; // consider first ring only
         }
     }
 
-    void operator()(mapnik::json::rings_array const& rings_array) const
+    void operator()(mapnik::json::rings_array const& rings_ar) const
     {
-        for (auto const& rings : rings_array)
+        for (auto const& rs : rings_ar)
         {
-            operator()(rings);
+            operator()(rs);
         }
     }
 
@@ -142,18 +142,19 @@ x3::rule<struct feature_collection_tag> const feature_collection = "Feature Coll
 
 auto const coordinates_rule_def = lit("\"coordinates\"") >> lit(':') >> positions_rule[extract_bounding_box];
 
-auto const bounding_box_def = raw[lit('{')[open_bracket] >> *(eps[check_brackets] >>
-                                  (lit("\"FeatureCollection\"") > eps(false)
-                                   |
-                                   lit('{')[open_bracket]
-                                   |
-                                   lit('}')[close_bracket]
-                                   |
-                                   coordinates_rule[assign_bbox]
-                                   |
-                                   omit[geojson_string]
-                                   |
-                                   omit[char_]))][assign_range];
+auto const bounding_box_def = raw[lit('{')[open_bracket]
+                                  >> *(eps[check_brackets] >>
+                                       ((lit("\"FeatureCollection\"") > eps(false))
+                                        |
+                                        lit('{')[open_bracket]
+                                        |
+                                        lit('}')[close_bracket]
+                                        |
+                                        coordinates_rule[assign_bbox]
+                                        |
+                                        omit[geojson_string]
+                                        |
+                                        omit[char_]))][assign_range];
 
 
 auto const feature = bounding_box[on_feature_callback];
@@ -180,9 +181,8 @@ void extract_bounding_boxes(Iterator& start, Iterator const& end, Boxes & boxes)
     using namespace boost::spirit;
     using space_type = mapnik::json::grammar::space_type;
     using iterator_type = Iterator;
-    using boxes_type = Boxes;
 
-    extract_positions<iterator_type, boxes_type> callback(start, boxes);
+    extract_positions<iterator_type, Boxes> callback(start, boxes);
     auto keys = mapnik::json::get_keys();
     std::size_t bracket_counter = 0;
     auto feature_collection_impl = x3::with<mapnik::json::grammar::bracket_tag>(std::ref(bracket_counter))

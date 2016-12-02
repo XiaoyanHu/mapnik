@@ -23,10 +23,6 @@
 #include <mapnik/json/parse_feature.hpp>
 #include <mapnik/json/json_grammar_config.hpp>
 #include <mapnik/json/feature_grammar_x3.hpp>
-#include <mapnik/json/create_geometry.hpp>
-#include <mapnik/util/conversions.hpp>
-#include <mapnik/value.hpp>
-#include <mapnik/geometry/geometry_types.hpp>
 
 namespace mapnik { namespace json {
 
@@ -49,9 +45,8 @@ void parse_geometry(Iterator start, Iterator end, feature_impl& feature)
 {
     namespace x3 = boost::spirit::x3;
     using space_type = mapnik::json::grammar::space_type;
-    auto grammar = x3::with<mapnik::json::grammar::feature_tag>(std::ref(feature))
-        [ mapnik::json::geometry_grammar() ];
-    if (!x3::phrase_parse(start, end, grammar, space_type()))
+    auto grammar = mapnik::json::geometry_grammar();
+    if (!x3::phrase_parse(start, end, grammar, space_type(), feature.get_geometry()))
     {
         throw std::runtime_error("Can't parser GeoJSON Geometry");
     }
